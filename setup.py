@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='llm_logger',  
-    version='0.1.1',  
+    version='0.1.2',  
     author='Dan Kirsche',  
     author_email='dan@agenta.app',  
     description='A package for asynchronously logging llm request/response.',
