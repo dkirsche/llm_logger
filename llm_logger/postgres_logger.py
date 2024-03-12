@@ -1,6 +1,7 @@
 import asyncio
 import asyncpg
 import os
+import datetime
 
 class PostgresLogger:
     def __init__(self, dsn=None):
@@ -36,12 +37,23 @@ class PostgresLogger:
         """
         await self.run_query(query)
     
-    async def insert_chat_completion(self, invocation_id, client_id, wrapper_id, session_id, request, response, is_cached, cost):
+    async def insert_chat_completion(self, invocation_id=None, client_id=None, wrapper_id=None, session_id=None, request=None, response=None, is_cached=None, cost=None, start_time=None, end_time=None):
         query = """
-            INSERT INTO chat_completions(invocation_id, client_id, wrapper_id, session_id, request, response, is_cached, cost)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO chat_completions(
+                invocation_id, 
+                client_id, 
+                wrapper_id, 
+                session_id, 
+                request, 
+                response, 
+                is_cached, 
+                cost,
+                start_time, 
+                end_time
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         """
-        await self.run_query(query, invocation_id, client_id, wrapper_id, session_id, request, response, is_cached, cost)
+        await self.run_query(query, invocation_id, client_id, wrapper_id, session_id, request, response, is_cached, cost, start_time or datetime.datetime.utcnow(), end_time or datetime.datetime.utcnow())
+
 
     async def run_query(self, query, *args):
         # Run a SQL query
