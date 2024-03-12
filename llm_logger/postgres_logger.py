@@ -20,17 +20,19 @@ class PostgresLogger:
     async def create_chat_completions_table(self):
         query = """
             CREATE TABLE IF NOT EXISTS chat_completions(
-                id SERIAL PRIMARY KEY,
-                invocation_id TEXT,
-                client_id INTEGER,
-                wrapper_id INTEGER,
-                session_id TEXT,
-                request TEXT,
-                response TEXT,
-                is_cached INTEGER,
-                cost REAL,
-                start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                end_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)
+            id SERIAL PRIMARY KEY,
+            invocation_id TEXT,
+            client_id INTEGER,
+            wrapper_id INTEGER,
+            session_id TEXT,
+            request TEXT,
+            response TEXT,
+            is_cached INTEGER,
+            cost REAL,
+            start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            end_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            total_time INTERVAL GENERATED ALWAYS AS (end_time - start_time) STORED
+        )
         """
         await self.run_query(query)
     
@@ -46,11 +48,11 @@ class PostgresLogger:
         if not self.connection:
             await self.connect()
         return await self.connection.execute(query, *args)
-
+ 
 # Example usage
 async def main():
     logger = PostgresLogger()
-    await logger.connect()
+    await logger.create_chat_completions_table()
     # Insert test data
     await logger.insert_chat_completion(
         invocation_id="test_invocation_001",
