@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='llm_logger',  
-    version='0.1.3',  
+    version='0.1.4',  
     author='Dan Kirsche',  
     author_email='dan@agenta.app',  
     description='A package for asynchronously logging llm request/response.',
@@ -13,6 +13,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'asyncpg>=0.21.0',  # Ensure you specify appropriate version constraints
+        'psycopg2-binary>=2.9.9',
     ],
     classifiers=[
         'Programming Language :: Python :: 3',
