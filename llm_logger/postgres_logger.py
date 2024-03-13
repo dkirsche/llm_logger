@@ -58,6 +58,8 @@ class PostgresLogger:
 
 
     def run_query(self, query, params=None):
+        if not self.connection:
+            self.connect()
         self.cursor.execute(query, params)
         if query.strip().upper().startswith("SELECT"):
             return self.cursor.fetchall()
@@ -68,7 +70,6 @@ class PostgresLogger:
 # Example usage
 def main():
     logger = PostgresLogger()
-    logger.connect()
     logger.create_chat_completions_table()
     # Remember to handle start_time and end_time appropriately as per your application logic
     logger.insert_chat_completion(invocation_id="test", client_id=1)
