@@ -2,6 +2,7 @@ import asyncio
 import psycopg2
 import os
 import datetime
+import logging
 
 class PostgresLogger:
     def __init__(self, dsn=None):
@@ -9,6 +10,8 @@ class PostgresLogger:
         self.dsn = dsn or os.getenv("POSTGRES_URL")
         self.connection = None
         self.cursor = None
+        logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger(__name__)
 
     def connect(self):
         # Establish a connection to the database
@@ -56,8 +59,11 @@ class PostgresLogger:
                 end_time
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        self.run_query(query, (invocation_id, client_id, wrapper_id, session_id, request, response, model_id, is_cached, cost, start_time or datetime.datetime.utcnow(), end_time or datetime.datetime.utcnow()))
-
+        try:
+            self.run_query(query, (invocation_id, client_id, wrapper_id, session_id, request, response, model_id, is_cached, cost, start_time or datetime.datetime.now(datetime.timezone.utc), end_time or datetime.datetime.now(datetime.timezone.utc)))
+        except Exception as e:
+            self.logger.warning(f"Failed to insert chat completion: {e}")
+            print(f"WARNING - Failed to insert chat completion in llm_logger library: {e}")
 
     def run_query(self, query, params=None):
         if not self.connection:
