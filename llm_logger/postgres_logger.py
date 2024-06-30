@@ -30,6 +30,7 @@ class PostgresLogger:
             session_id TEXT,
             request TEXT,
             response TEXT,
+            model_id TEXT,
             is_cached INTEGER,
             cost REAL,
             start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -39,7 +40,7 @@ class PostgresLogger:
         """
         self.run_query(query)
     
-    def insert_chat_completion(self, invocation_id=None, client_id=None, wrapper_id=None, session_id=None, request=None, response=None, is_cached=None, cost=None, start_time=None, end_time=None):
+    def insert_chat_completion(self, invocation_id=None, client_id=None, wrapper_id=None, session_id=None, request=None, response=None, model_id=None, is_cached=None, cost=None, start_time=None, end_time=None):
         query = """
             INSERT INTO chat_completions(
                 invocation_id, 
@@ -48,13 +49,14 @@ class PostgresLogger:
                 session_id, 
                 request, 
                 response, 
+                model_id,
                 is_cached, 
                 cost,
                 start_time, 
                 end_time
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        self.run_query(query, (invocation_id, client_id, wrapper_id, session_id, request, response, is_cached, cost, start_time or datetime.datetime.utcnow(), end_time or datetime.datetime.utcnow()))
+        self.run_query(query, (invocation_id, client_id, wrapper_id, session_id, request, response, model_id, is_cached, cost, start_time or datetime.datetime.utcnow(), end_time or datetime.datetime.utcnow()))
 
 
     def run_query(self, query, params=None):
