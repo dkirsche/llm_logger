@@ -69,7 +69,7 @@ function DataComponent() {
                                 <p><strong>Model ID:</strong> {item.model_id}</p>
                                 <p><strong>Cost:</strong> ${item.cost}</p>
                             </div>
-                            <p><strong>{item.agent} Request:</strong></p>
+                            <p><strong>Request: {item.agent}</strong></p>
                             {typeof formattedRequest === 'string' ? (
                                 <p style={{
                                     background: '#f0f0f0',
