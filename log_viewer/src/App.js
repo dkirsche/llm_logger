@@ -22,6 +22,7 @@ const GET_DATA = gql`
         end_time
         cost
         model_id
+        agent
       }
     }
 `;
@@ -68,7 +69,7 @@ function DataComponent() {
                                 <p><strong>Model ID:</strong> {item.model_id}</p>
                                 <p><strong>Cost:</strong> ${item.cost}</p>
                             </div>
-                            <p><strong>Request:</strong></p>
+                            <p><strong>{item.agent} Request:</strong></p>
                             {typeof formattedRequest === 'string' ? (
                                 <p style={{
                                     background: '#f0f0f0',
@@ -91,7 +92,7 @@ function DataComponent() {
                                     {JSON.stringify(formattedRequest, null, 2)}
                                 </pre>
                             )}
-                            <p><strong>Response:</strong></p>
+                            <p><strong>{item.agent} Response:</strong></p>
                             <p style={{ 
                                 background: '#e6e6e6', 
                                 padding: '10px', 
