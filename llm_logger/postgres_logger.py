@@ -27,6 +27,7 @@ class PostgresLogger:
         query = """
             CREATE TABLE IF NOT EXISTS chat_completions(
             id SERIAL PRIMARY KEY,
+            agent TEXT,
             invocation_id TEXT,
             client_id INTEGER,
             wrapper_id INTEGER,
@@ -43,9 +44,10 @@ class PostgresLogger:
         """
         self.run_query(query)
     
-    def insert_chat_completion(self, invocation_id=None, client_id=None, wrapper_id=None, session_id=None, request=None, response=None, model_id=None, is_cached=None, cost=None, start_time=None, end_time=None):
+    def insert_chat_completion(self, agent=None,invocation_id=None, client_id=None, wrapper_id=None, session_id=None, request=None, response=None, model_id=None, is_cached=None, cost=None, start_time=None, end_time=None):
         query = """
             INSERT INTO chat_completions(
+                agent,
                 invocation_id, 
                 client_id, 
                 wrapper_id, 
@@ -57,10 +59,10 @@ class PostgresLogger:
                 cost,
                 start_time, 
                 end_time
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         try:
-            self.run_query(query, (invocation_id, client_id, wrapper_id, session_id, request, response, model_id, is_cached, cost, start_time or datetime.datetime.now(datetime.timezone.utc), end_time or datetime.datetime.now(datetime.timezone.utc)))
+            self.run_query(query, (agent, invocation_id, client_id, wrapper_id, session_id, request, response, model_id, is_cached, cost, start_time or datetime.datetime.now(datetime.timezone.utc), end_time or datetime.datetime.now(datetime.timezone.utc)))
         except Exception as e:
             self.logger.warning(f"Failed to insert chat completion: {e}")
             print(f"WARNING - Failed to insert chat completion in llm_logger library: {e}")
