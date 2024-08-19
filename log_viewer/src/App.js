@@ -92,7 +92,8 @@ function DataComponent() {
                                     {JSON.stringify(formattedRequest, null, 2)}
                                 </pre>
                             )}
-                            <p><strong>{item.agent} Response:</strong></p>
+                            <p><strong> Agent:</strong> {item.agent}</p>
+                            <p><strong> Response:</strong></p>
                             <p style={{ 
                                 background: '#e6e6e6', 
                                 padding: '10px', 
