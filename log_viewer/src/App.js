@@ -13,7 +13,7 @@ const client = new ApolloClient({
 // GraphQL query to fetch data from a specific table
 const GET_DATA = gql`
     query MyQuery {
-      chat_completions(limit: 10, order_by: {start_time: desc}) {
+      chat_completions(limit: 30, order_by: {start_time: desc}) {
         request
         response
         start_time
