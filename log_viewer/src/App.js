@@ -121,6 +121,8 @@ function DataComponent() {
                     style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                     placeholder="Enter ID or leave blank"
                 />
+                {/* Show loading indicator next to the input field */}
+                {loading && <span style={{ marginLeft: '10px' }}>Loading...</span>}
             </div>
 
             <ul style={{ listStyleType: 'none', padding: 0 }}>
