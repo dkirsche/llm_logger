@@ -10,14 +10,14 @@ const client = new ApolloClient({
     cache: new InMemoryCache(),
 });
 
-// GraphQL query
+// GraphQL query to fetch data
 const GET_DATA = gql`
-    query MyQuery($startId: Int) {
+    query MyQuery($startId: Int, $limit: Int) {
       chat_completions(
         where: {
           id: { _lte: $startId }
         },
-        limit: 30,
+        limit: $limit,
         order_by: {start_time: desc}
       ) {
         request
@@ -34,63 +34,101 @@ const GET_DATA = gql`
 `;
 
 function DataComponent() {
-    const [startIdInput, setStartIdInput] = useState(''); // Default input to blank
     const [startId, setStartId] = useState(2147483647); // Default to max int value
-    const [typingTimeout, setTypingTimeout] = useState(null); // Timeout for debounce
+    const [nextStartId, setNextStartId] = useState(null); // Variable to store next startId for future queries
+    const [chatCompletions, setChatCompletions] = useState([]); // Store chat completions
+    const [isFetchingMore, setIsFetchingMore] = useState(false); // Track if we're fetching more data
+    const [userStartId, setUserStartId] = useState(''); // User input for start ID
+    const [debounceTimeout, setDebounceTimeout] = useState(null); // Timeout for debounce
+    const limit = 30; // Number of items to load per scroll
 
-    // Debounce function to update the query only after user stops typing for 500ms
-    const handleStartIdChange = (e) => {
+    // Fetch data with GraphQL query
+    const { loading, error, data, fetchMore } = useQuery(GET_DATA, {
+        variables: { startId, limit },
+        notifyOnNetworkStatusChange: true, // To track loading states properly
+        onCompleted: (fetchedData) => {
+            if (fetchedData?.chat_completions.length > 0) {
+                if (isFetchingMore) {
+                    // Infinite scroll case: append to the existing list
+                    setChatCompletions((prev) => [...prev, ...fetchedData.chat_completions]);
+                } else {
+                    // New user start ID: replace the entire list
+                    setChatCompletions(fetchedData.chat_completions);
+                }
+                // Set nextStartId to the last record's ID, but do NOT trigger a re-fetch
+                setNextStartId(fetchedData.chat_completions[fetchedData.chat_completions.length - 1].id - 1);
+            }
+            setIsFetchingMore(false);
+        },
+    });
+
+    // Infinite scroll: detect if user scrolls near the bottom and load more data
+    useEffect(() => {
+        const handleScroll = () => {
+            const isNearBottom =
+                window.innerHeight + document.documentElement.scrollTop >=
+                document.documentElement.offsetHeight - 100;
+
+            if (isNearBottom && !isFetchingMore && !loading) {
+                setIsFetchingMore(true);
+                // Now, use the nextStartId to update startId, and trigger the next fetch
+                setStartId(nextStartId);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [isFetchingMore, loading, nextStartId]);
+
+    // Handle user input and debounce the query update
+    const handleUserStartIdChange = (e) => {
         const value = e.target.value;
-        setStartIdInput(value);
+        setUserStartId(value);
 
-        if (typingTimeout) {
-            clearTimeout(typingTimeout);
+        // Clear previous debounce timeout if user keeps typing
+        if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
         }
 
-        // Set a timeout to update the startId after user stops typing for 500ms
-        setTypingTimeout(
+        // Set new debounce timeout for 2.5 seconds
+        setDebounceTimeout(
             setTimeout(() => {
-                // If input is empty, default to the largest possible int value
-                setStartId(value === '' ? Number.MAX_SAFE_INTEGER : parseInt(value));
-            }, 500)
+                // If input is valid (not empty), set startId to the user's input
+                if (value !== '') {
+                    setStartId(parseInt(value)); // Update startId with user's input
+                } else {
+                    setStartId(2147483647); // Reset to max int if input is cleared
+                }
+            }, 2500) // 2.5 seconds debounce
         );
     };
 
-    // Conditional variables to avoid passing null values
-    const queryVariables = { startId };
-
-    const { loading, error, data } = useQuery(GET_DATA, {
-        variables: queryVariables, // Always pass startId (default to largest int when blank)
-    });
-
-    if (loading) return <p>Loading...</p>;
+    if (loading && chatCompletions.length === 0) return <p>Loading...</p>;
     if (error) return <p>Error: {error.message}</p>;
 
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
             <h1 style={{ textAlign: 'center', color: '#333' }}>Chat Completions Data</h1>
-            
+
             {/* Input to set starting ID */}
             <div style={{ marginBottom: '20px', textAlign: 'center' }}>
                 <label htmlFor="startId" style={{ marginRight: '10px' }}>Start from ID:</label>
                 <input
                     id="startId"
                     type="number"
-                    value={startIdInput}
-                    onChange={handleStartIdChange}
+                    value={userStartId}
+                    onChange={handleUserStartIdChange}
                     style={{ padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
                     placeholder="Enter ID or leave blank"
                 />
             </div>
 
             <ul style={{ listStyleType: 'none', padding: 0 }}>
-                {data.chat_completions.map((item) => {
+                {chatCompletions.map((item, index) => {
                     let formattedRequest;
                     try {
-                        // Attempt to parse the request into JSON
                         formattedRequest = JSON.parse(item.request);
                     } catch (e) {
-                        // Fallback to raw string with text wrapping
                         formattedRequest = item.request;
                     }
 
@@ -152,6 +190,8 @@ function DataComponent() {
                     );
                 })}
             </ul>
+
+            {isFetchingMore && <p>Loading more...</p>}
         </div>
     );
 }
