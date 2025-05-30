@@ -3,9 +3,9 @@ import { ApolloClient, InMemoryCache, ApolloProvider, useQuery, gql } from '@apo
 
 // Hasura GraphQL endpoint
 const client = new ApolloClient({
-    uri: 'https://relevant-finch-21.hasura.app/v1/graphql',
+    uri: 'https://glad-bonefish-73.hasura.app/v1/graphql',
     headers: {
-        'x-hasura-admin-secret': '7fveFDT8WWnuajGHr3L76D1ymmQrwJm561NIWqz50BWvTWCbWWt08cPHk6NNlQrh',
+        'x-hasura-admin-secret': 'FAo4qiSQcfI71s4K0IgL5xIvlYLPbZaWbiui2QYeXRlSthB6AFyNY6MRK9T9DFeF',
     },
     cache: new InMemoryCache(),
 });
