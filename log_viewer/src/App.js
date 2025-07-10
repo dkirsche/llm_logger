@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ApolloClient, InMemoryCache, ApolloProvider, useQuery, gql } from '@apollo/client';
+import AgentStatus from './AgentStatus';
 
 // Hasura GraphQL endpoint
 const client = new ApolloClient({
@@ -199,10 +200,59 @@ function DataComponent() {
 }
 
 function App() {
+    const [activeTab, setActiveTab] = useState('chat-completions');
+
+    const tabStyle = {
+        padding: '12px 24px',
+        border: 'none',
+        backgroundColor: '#f8f9fa',
+        cursor: 'pointer',
+        borderBottom: '3px solid transparent',
+        fontSize: '16px',
+        fontWeight: '500',
+        transition: 'all 0.3s ease'
+    };
+
+    const activeTabStyle = {
+        ...tabStyle,
+        backgroundColor: '#007bff',
+        color: 'white',
+        borderBottom: '3px solid #0056b3'
+    };
+
     return (
         <ApolloProvider client={client}>
             <div className="App">
-                <DataComponent />
+                {/* Tab Navigation */}
+                <div style={{
+                    borderBottom: '1px solid #dee2e6',
+                    backgroundColor: '#f8f9fa',
+                    padding: '0',
+                    marginBottom: '0'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        maxWidth: '1200px',
+                        margin: '0 auto'
+                    }}>
+                        <button
+                            style={activeTab === 'chat-completions' ? activeTabStyle : tabStyle}
+                            onClick={() => setActiveTab('chat-completions')}
+                        >
+                            Chat Completions
+                        </button>
+                        <button
+                            style={activeTab === 'agent-status' ? activeTabStyle : tabStyle}
+                            onClick={() => setActiveTab('agent-status')}
+                        >
+                            Agent Status
+                        </button>
+                    </div>
+                </div>
+
+                {/* Tab Content */}
+                {activeTab === 'chat-completions' && <DataComponent />}
+                {activeTab === 'agent-status' && <AgentStatus />}
             </div>
         </ApolloProvider>
     );
