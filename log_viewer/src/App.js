@@ -200,7 +200,32 @@ function DataComponent() {
 }
 
 function App() {
-    const [activeTab, setActiveTab] = useState('chat-completions');
+    // Initialize active tab from URL hash or default to chat-completions
+    const getInitialTab = () => {
+        const hash = window.location.hash.replace('#', '');
+        return hash === 'agents' ? 'agent-status' : 'chat-completions';
+    };
+
+    const [activeTab, setActiveTab] = useState(getInitialTab);
+
+    // Update URL hash when tab changes
+    const handleTabChange = (tabName) => {
+        setActiveTab(tabName);
+        const hashName = tabName === 'agent-status' ? 'agents' : 'chat-completions';
+        window.location.hash = hashName;
+    };
+
+    // Listen for browser back/forward navigation
+    useEffect(() => {
+        const handleHashChange = () => {
+            const hash = window.location.hash.replace('#', '');
+            const newTab = hash === 'agents' ? 'agent-status' : 'chat-completions';
+            setActiveTab(newTab);
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
 
     const tabStyle = {
         padding: '12px 24px',
@@ -237,20 +262,20 @@ function App() {
                     }}>
                         <button
                             style={activeTab === 'chat-completions' ? activeTabStyle : tabStyle}
-                            onClick={() => setActiveTab('chat-completions')}
+                            onClick={() => handleTabChange('chat-completions')}
                         >
                             Chat Completions
                         </button>
                         <button
                             style={activeTab === 'agent-status' ? activeTabStyle : tabStyle}
-                            onClick={() => setActiveTab('agent-status')}
+                            onClick={() => handleTabChange('agent-status')}
                         >
                             Agents
                         </button>
                     </div>
                 </div>
 
-                {/* Tab Content */}
+                {/* Tab Content - Only render active tab to prevent unnecessary data loading */}
                 {activeTab === 'chat-completions' && <DataComponent />}
                 {activeTab === 'agent-status' && <AgentStatus />}
             </div>

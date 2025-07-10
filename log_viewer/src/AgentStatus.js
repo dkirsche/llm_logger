@@ -19,7 +19,7 @@ const GET_AGENT_STATUS = gql`
     }
 `;
 
-// GraphQL mutation to toggle the is_paused status
+// GraphQL mutation to toggle the is_paused status - optimized to return minimal data
 const TOGGLE_AGENT_PAUSE = gql`
     mutation ToggleAgentPause($agent_id: uuid!, $is_paused: Boolean!) {
       update_agent_status(
@@ -29,11 +29,7 @@ const TOGGLE_AGENT_PAUSE = gql`
         affected_rows
         returning {
           agent_id
-          agent_name
-          created_at
           is_paused
-          pause_message
-          updated_at
         }
       }
     }
@@ -44,6 +40,9 @@ function AgentStatus() {
     const limit = 100; // 100 records per page as requested
     const offset = (currentPage - 1) * limit;
 
+    // Track loading state per agent
+    const [loadingAgents, setLoadingAgents] = useState(new Set());
+
     // Fetch data with GraphQL query
     const { loading, error, data, refetch } = useQuery(GET_AGENT_STATUS, {
         variables: { offset, limit },
@@ -51,10 +50,13 @@ function AgentStatus() {
     });
 
     // Mutation hook for toggling pause status
-    const [toggleAgentPause, { loading: mutationLoading }] = useMutation(TOGGLE_AGENT_PAUSE);
+    const [toggleAgentPause] = useMutation(TOGGLE_AGENT_PAUSE);
 
     // Function to handle toggle button click
     const handleTogglePause = async (agentId, currentPauseStatus) => {
+        // Add this agent to loading set
+        setLoadingAgents(prev => new Set(prev).add(agentId));
+
         try {
             console.log('Toggling pause status for agent:', agentId, 'from', currentPauseStatus, 'to', !currentPauseStatus);
 
@@ -62,13 +64,38 @@ function AgentStatus() {
                 variables: {
                     agent_id: agentId,
                     is_paused: !currentPauseStatus
+                },
+                // Optimistic update - update cache immediately without refetching
+                update: (cache, { data }) => {
+                    if (data?.update_agent_status?.returning?.length > 0) {
+                        const updatedAgent = data.update_agent_status.returning[0];
+
+                        // Update the cache for the current query
+                        const existingData = cache.readQuery({
+                            query: GET_AGENT_STATUS,
+                            variables: { offset, limit }
+                        });
+
+                        if (existingData) {
+                            const updatedAgentStatus = existingData.agent_status.map(agent =>
+                                agent.agent_id === updatedAgent.agent_id
+                                    ? { ...agent, is_paused: updatedAgent.is_paused }
+                                    : agent
+                            );
+
+                            cache.writeQuery({
+                                query: GET_AGENT_STATUS,
+                                variables: { offset, limit },
+                                data: {
+                                    agent_status: updatedAgentStatus
+                                }
+                            });
+                        }
+                    }
                 }
             });
 
             console.log('Mutation result:', result);
-
-            // Refetch the data to show updated values
-            refetch();
         } catch (error) {
             console.error('Full error object:', error);
             console.error('Error message:', error.message);
@@ -83,6 +110,16 @@ function AgentStatus() {
             }
 
             alert(errorMessage);
+
+            // On error, refetch to ensure UI is in sync with database
+            refetch();
+        } finally {
+            // Remove this agent from loading set
+            setLoadingAgents(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(agentId);
+                return newSet;
+            });
         }
     };
 
@@ -224,48 +261,51 @@ function AgentStatus() {
                         </tr>
                     </thead>
                     <tbody>
-                        {agentStatusData.map((item, index) => (
-                            <tr key={`${item.agent_id}-${index}`} style={{
-                                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
-                                borderBottom: '1px solid #dee2e6'
-                            }}>
-                                <td style={{ padding: '12px' }}>
-                                    {item.agent_id}
-                                </td>
-                                <td style={{ padding: '12px' }}>
-                                    {item.agent_name}
-                                </td>
-                                <td style={{ padding: '12px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <button
-                                            onClick={() => handleTogglePause(item.agent_id, item.is_paused)}
-                                            disabled={mutationLoading}
-                                            style={{
-                                                padding: '6px 12px',
-                                                borderRadius: '4px',
-                                                border: 'none',
-                                                backgroundColor: item.is_paused ? '#dc3545' : '#28a745',
-                                                color: 'white',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold',
-                                                cursor: mutationLoading ? 'not-allowed' : 'pointer',
-                                                opacity: mutationLoading ? 0.6 : 1,
-                                                transition: 'all 0.2s ease',
-                                                minWidth: '80px'
-                                            }}
-                                            onMouseOver={(e) => {
-                                                if (!mutationLoading) {
-                                                    e.target.style.opacity = '0.8';
-                                                }
-                                            }}
-                                            onMouseOut={(e) => {
-                                                if (!mutationLoading) {
-                                                    e.target.style.opacity = '1';
-                                                }
-                                            }}
-                                        >
-                                            {mutationLoading ? 'Updating...' : (item.is_paused ? 'PAUSED' : 'ACTIVE')}
-                                        </button>
+                        {agentStatusData.map((item, index) => {
+                            const isThisAgentLoading = loadingAgents.has(item.agent_id);
+
+                            return (
+                                <tr key={`${item.agent_id}-${index}`} style={{
+                                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8f9fa',
+                                    borderBottom: '1px solid #dee2e6'
+                                }}>
+                                    <td style={{ padding: '12px' }}>
+                                        {item.agent_id}
+                                    </td>
+                                    <td style={{ padding: '12px' }}>
+                                        {item.agent_name}
+                                    </td>
+                                    <td style={{ padding: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <button
+                                                onClick={() => handleTogglePause(item.agent_id, item.is_paused)}
+                                                disabled={isThisAgentLoading}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    borderRadius: '4px',
+                                                    border: 'none',
+                                                    backgroundColor: item.is_paused ? '#dc3545' : '#28a745',
+                                                    color: 'white',
+                                                    fontSize: '12px',
+                                                    fontWeight: 'bold',
+                                                    cursor: isThisAgentLoading ? 'not-allowed' : 'pointer',
+                                                    opacity: isThisAgentLoading ? 0.6 : 1,
+                                                    transition: 'all 0.2s ease',
+                                                    minWidth: '80px'
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    if (!isThisAgentLoading) {
+                                                        e.target.style.opacity = '0.8';
+                                                    }
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    if (!isThisAgentLoading) {
+                                                        e.target.style.opacity = '1';
+                                                    }
+                                                }}
+                                            >
+                                                {isThisAgentLoading ? 'Updating...' : (item.is_paused ? 'PAUSED' : 'ACTIVE')}
+                                            </button>
                                         {item.pause_message && (
                                             <span style={{
                                                 fontSize: '12px',
@@ -284,7 +324,8 @@ function AgentStatus() {
                                     {item.updated_at ? new Date(item.updated_at).toLocaleString() : '-'}
                                 </td>
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
