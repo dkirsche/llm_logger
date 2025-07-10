@@ -245,7 +245,7 @@ function App() {
                             style={activeTab === 'agent-status' ? activeTabStyle : tabStyle}
                             onClick={() => setActiveTab('agent-status')}
                         >
-                            Agent Status
+                            Agents
                         </button>
                     </div>
                 </div>
